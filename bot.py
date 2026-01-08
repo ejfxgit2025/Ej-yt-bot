@@ -4,7 +4,7 @@ from telegram import Update
 from telegram.ext import ApplicationBuilder, MessageHandler, ContextTypes, filters
 import yt_dlp
 
-TOKEN = os.environ.get("8574509177:AAFUsn_aZF4i64L8Xg_ysxCZlZtpMyPr1Wo")
+TOKEN = os.environ.get("BOT_TOKEN")
 
 app_flask = Flask(__name__)
 app = ApplicationBuilder().token(TOKEN).build()
