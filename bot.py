@@ -16,7 +16,6 @@ from telegram.ext import (
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 
-# ---------- KEYBOARD ----------
 keyboard = InlineKeyboardMarkup([
     [InlineKeyboardButton("🎥 360p Video", callback_data="360")],
     [InlineKeyboardButton("🎥 720p Video", callback_data="720")],
@@ -29,7 +28,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "🔥 *EJ YT Videos Downloader*\n\n"
         "📥 Send YouTube link\n"
         "👇 Choose quality\n\n"
-        "⚡ Fast • Unlimited • Free\n"
+        "⚡ Fast Link Mode\n"
         "🤖 Created by EJ",
         parse_mode="Markdown",
         reply_markup=keyboard,
@@ -45,12 +44,11 @@ async def save_link(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     context.user_data["url"] = url
     await update.message.reply_text(
-        "✅ *Link saved*\n👇 Choose option",
-        parse_mode="Markdown",
+        "✅ Link saved\n👇 Choose option",
         reply_markup=keyboard,
     )
 
-# ---------- BUTTON HANDLER ----------
+# ---------- BUTTON ----------
 async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -64,14 +62,26 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     ydl_opts = {
         "quiet": True,
+        "no_warnings": True,
         "skip_download": True,
+        "force_ipv4": True,
+        "http_headers": {
+            "User-Agent": (
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/120.0.0.0 Safari/537.36"
+            )
+        },
     }
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
-    except Exception:
-        await query.message.reply_text("❌ Failed to fetch video info")
+    except Exception as e:
+        await query.message.reply_text(
+            "❌ YouTube blocked this request\n"
+            "🔁 Try again or use another video"
+        )
         return
 
     choice = query.data
@@ -81,18 +91,16 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         for f in info["formats"]:
             if f.get("acodec") != "none" and f.get("vcodec") == "none":
                 await query.message.reply_text(
-                    f"🎵 *Audio Download*\n\n"
-                    f"🔗 {f['url']}",
+                    f"🎵 *Audio Download*\n\n🔗 {f['url']}",
                     parse_mode="Markdown",
                 )
                 return
 
     # ---------- VIDEO ----------
     for f in info["formats"]:
-        if f.get("height") == int(choice):
+        if f.get("height") == int(choice) and f.get("vcodec") != "none":
             await query.message.reply_text(
-                f"🎥 *{choice}p Video Download*\n\n"
-                f"🔗 {f['url']}",
+                f"🎥 *{choice}p Video Download*\n\n🔗 {f['url']}",
                 parse_mode="Markdown",
             )
             return
