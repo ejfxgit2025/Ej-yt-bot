@@ -1,4 +1,5 @@
 import os
+import glob
 import yt_dlp
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
@@ -15,15 +16,20 @@ BOT_TOKEN = os.getenv("BOT_TOKEN")
 keyboard = InlineKeyboardMarkup([
     [InlineKeyboardButton("🎥 360p", callback_data="360")],
     [InlineKeyboardButton("🎥 720p", callback_data="720")],
-    [InlineKeyboardButton("🎵 Audio (MP3)", callback_data="audio")],
+    [InlineKeyboardButton("🎵 Audio", callback_data="audio")],
 ])
+
+def clean_files():
+    for f in glob.glob("*.*"):
+        if f.endswith(("mp4", "webm", "m4a", "mkv")):
+            os.remove(f)
 
 # ---------- START ----------
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "🔥 *EJ YT Downloader*\n\n"
         "📥 Send YouTube link\n"
-        "👇 Choose format\n\n"
+        "👇 Choose option\n\n"
         "🤖 Created by EJ",
         parse_mode="Markdown",
         reply_markup=keyboard,
@@ -52,31 +58,37 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.message.reply_text("❌ Send link first")
         return
 
-    choice = query.data
+    clean_files()
     await query.message.reply_text("⏳ Downloading...")
 
-    # ---- AUDIO (M4A, WORKS WITHOUT FFMPEG) ----
+    choice = query.data
+
+    # AUDIO (NO FFMPEG, WORKS)
     if choice == "audio":
         ydl_opts = {
-            "format": "bestaudio[ext=m4a]/bestaudio",
+            "format": "bestaudio",
             "outtmpl": "audio.%(ext)s",
         }
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             ydl.download([url])
 
-        await query.message.reply_audio(open("audio.m4a", "rb"))
+        file = glob.glob("audio.*")[0]
+        await query.message.reply_audio(open(file, "rb"))
+        clean_files()
         return
 
-    # ---- VIDEO ----
+    # VIDEO
     ydl_opts = {
-        "format": f"best[height<={choice}][ext=mp4]",
-        "outtmpl": "video.mp4",
+        "format": f"best[height<={choice}]",
+        "outtmpl": "video.%(ext)s",
     }
 
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         ydl.download([url])
 
-    await query.message.reply_video(open("video.mp4", "rb"))
+    file = glob.glob("video.*")[0]
+    await query.message.reply_video(open(file, "rb"))
+    clean_files()
 
 # ---------- MAIN ----------
 def main():
